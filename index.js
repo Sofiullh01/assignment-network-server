@@ -1,10 +1,16 @@
 const express = require('express')
 const app = express()
+const cors = require('cors');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
 
 
-const port = 5000
+const port = process.env.PORT ||5000
+
+// Allow requests from http://localhost:5173
+
+app.use(cors())
+app.use(express.json())
 
 
 
@@ -21,10 +27,23 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-
     await client.connect();
+
+    const assignmentCollection = client.db('allAssignments').collection('assignments');
  
+
+    // assignment 
+    app.get('/api/v1/assignments', async(req,res)=>{
+      const cursor = assignmentCollection.find();
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+    app.post('/api/v1/addassignments', async (req, res) => {
+      const assignment = req.body;
+      console.log(assignment);
+      const result = await assignmentCollection.insertOne(assignment);
+      res.send(result)
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
@@ -37,15 +56,12 @@ run().catch(console.dir);
 
 
 
+
+
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
-// pass: FnvKXOzOA9gs5dJl user: assignment-project
-
-app.post('/api/v1/addassignments', (req,res)=>{
-  res.send('it is working')
-})
 
 app.listen(port, () => {
   console.log(`Assignment on port ${port}`)
