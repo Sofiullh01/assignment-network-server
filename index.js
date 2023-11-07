@@ -44,6 +44,44 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result)
     });
+
+    // update
+    app.put('/api/v1/addassignments/:id', async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const options = { upsert: true };
+      const updated = req.body;
+      console.log(updated)
+      const updateDoc = {
+        $set: {
+          title: updated.title,
+          description: updated.description,
+          thumbnail: updated.thumbnail,
+          cetagory: updated.cetagory,
+          dueDate: updated.dueDate,
+          marks: updated.marks,
+          email: updated.email
+          
+        },
+      };
+      const result = await assignmentCollection.updateOne(filter,updateDoc,options)
+      res.send(result)
+    })
+    // delete
+    app.delete('/api/v1/addassignments/:id', async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await assignmentCollection.deleteOne(query);
+      res.send(result);
+    }) 
+
+
+    app.get('/api/v1/addassignments/:id',async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const result = await assignmentCollection.findOne(filter);
+      res.send(result)
+    })
     
     app.get('/api/v1/assignments/:id', async(req,res)=>{
       const id = req.params.id;
