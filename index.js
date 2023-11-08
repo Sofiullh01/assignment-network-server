@@ -85,6 +85,7 @@ async function run() {
     
     app.get('/api/v1/assignments/:id', async(req,res)=>{
       const id = req.params.id;
+      console.log(id)
       const query = {_id: new ObjectId(id)};
       const options = {
         projection: { title: 1, thumbnail: 1, email: 1,dueDate:1,cetagory:1,marks: 1},
@@ -99,7 +100,32 @@ async function run() {
       const result = await assignmentCollection.insertOne(assignment);
       res.send(result)
     });
+
     // submit
+    app.get('/api/v1/submit', async(req,res)=>{
+      let query = {}
+      if(req.query?.status){
+        query = {status: req.query.status}
+      }
+      const filter = submitCollection.find(query);
+      const result = await filter.toArray();
+      res.send(result)
+    })
+
+    app.patch('/api/v1/submit/:id',async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const updateStatus = req.body;
+      console.log(updateStatus);
+      const updateDoc = {
+        $set: {
+          status:updateStatus.status
+        },
+      }
+      const result = await submitCollection.updateOne(filter,updateDoc);
+      res.send(result)
+    })
+
     app.post('/api/v1/addassignments/submit',async(req,res)=>{
       const submit = req.body;
       console.log(submit)
