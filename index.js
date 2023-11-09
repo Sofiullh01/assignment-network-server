@@ -1,6 +1,8 @@
 const express = require('express')
 const app = express()
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 
@@ -9,11 +11,38 @@ const port = process.env.PORT ||5000
 
 // Allow requests from http://localhost:5173
 
-app.use(cors())
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://group-study-ed33e.web.app',
+    'https://group-study-ed33e.firebaseapp.com'
+  ],
+  credentials: true,
+}));
 app.use(express.json())
+app.use(cookieParser())
 
+// my middlewers
+// const logger = async(req,res,next)=>{
 
-
+// }
+const verifyToken = async(req,res,next)=>{
+  const token = req.cookies?.token;
+  console.log('velue of middlewars',token)
+  if(!token){
+    return res.status(401).send({message: 'Unauthorized'})
+  };
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET,(error,decoded)=>{
+    if(error){
+      console.log(error)
+      return res.status(401).send({message: 'Unauthorized'})
+    }
+    console.log('value in the token',decoded)
+    req.user = decoded;
+    next()
+  })
+}
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.upyz80t.mongodb.net/?retryWrites=true&w=majority`;
 
 // MOngodb Connection
@@ -27,15 +56,30 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
 
     const assignmentCollection = client.db('allAssignments').collection('assignments');
     const submitCollection = client.db('allAssignments').collection('submit')
+    const showCollection = client.db('allAssignments').collection('showAsin')
  
+    // auth related api
+    app.post('/jwt', async(req,res)=>{
+      const user = req.body;
+      console.log(user)
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET,{expiresIn: '1h'})
+      
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', 
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+
+    })
+      .send({success: true})
+    })
 
     // assignment 
     app.get('/api/v1/assignments', async(req,res)=>{
       console.log(req.query.cetagory);
+      console.log('user in the value from valid token',req.user)
       let qurey = {};
       if(req.query?.cetagory){
         qurey = {cetagory: req.query.cetagory}
@@ -133,7 +177,20 @@ async function run() {
       res.send(result)
     })
 
-    await client.db("admin").command({ ping: 1 });
+    // showAssignment
+    app.post('/api/v1/showAssignment',async(req,res)=>{
+      const submit = req.body;
+      console.log(submit)
+      const result = await showCollection.insertOne(submit);
+      res.send(result)
+    })
+
+    app.get('/api/v1/showAssignment', async(req,res)=>{    
+      const filter = showCollection.find();
+      const result = await filter.toArray();
+      res.send(result)
+    })
+
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
