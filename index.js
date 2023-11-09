@@ -23,10 +23,7 @@ app.use(cors({
 app.use(express.json())
 app.use(cookieParser())
 
-// my middlewers
-// const logger = async(req,res,next)=>{
 
-// }
 const verifyToken = async(req,res,next)=>{
   const token = req.cookies?.token;
   console.log('velue of middlewars',token)
